@@ -1,0 +1,84 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: idp-microservice-template
+  title: Create New Service
+  description: Scaffold a new service (GitHub repo + CI + Dockerfile + Helm + ArgoCD + Grafana monitoring) in one click.
+spec:
+  owner: user:guest
+  type: service
+
+  parameters:
+    - title: Service Details
+      required:
+        - name
+        - description
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Name of the service (e.g. billing-service)
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          description: A brief description of the service
+    - title: Choose a Git Repository Location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+  steps:
+    - id: fetch-base
+      name: Generate Source Code & Configuration
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          repoUrl: ${{ parameters.repoUrl }}
+          # We extract the repository name and owner from repoUrl in skeleton if needed,
+          # but we can also parse them dynamically. Let's provide some helpers:
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        description: ${{ parameters.description }}
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: 'main'
+
+    - id: register
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+    - id: notify
+      name: Send Scaffolding Notification
+      action: notification:send
+      input:
+        recipients: entity
+        entityRefs:
+          - user:default/guest
+        title: 'Platform Engineering Template Executed Successfully'
+        info: 'Your service "${{ parameters.name }}" has been generated, published, and registered!'
+        severity: 'normal'
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}

@@ -1,12 +1,10 @@
-# DevLaunch IDP
+# [Backstage](https://backstage.io)
 
-An Internal Developer Platform built with Backstage.
+This is your newly scaffolded Backstage App, Good Luck!
 
-Features:
-- Self-service service creation
-- GitHub repository automation
-- GitHub Actions CI/CD
-- Docker image generation
-- Helm chart generation
-- ArgoCD deployment
-- Monitoring integration
+To start the app, run:
+
+```sh
+yarn install
+yarn start
+```
